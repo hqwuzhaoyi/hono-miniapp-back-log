@@ -12,6 +12,16 @@ const logWithTimestamp = (message) => {
   console.log(logMessage); // 仍然打印到控制台
 };
 
+let lastLogTime = 0;
+
+const logThrottled = (message, interval = 1000) => {
+  const currentTime = Date.now();
+  if (currentTime - lastLogTime >= interval) {
+    logWithTimestamp(message);
+    lastLogTime = currentTime;
+  }
+};
+
 const app = new Hono();
 
 app.get("/", (c) => {
@@ -25,10 +35,20 @@ app.post("/", async (c) => {
   console.log("Received object:", body);
 
   // 记录日志到文件
-  logWithTimestamp(`Received object: ${JSON.stringify(body)}`);
+  logThrottled(`Received object: ${JSON.stringify(body)}`);
 
   // 返回成功响应
   return c.json({ message: "Data received successfully!", received: body });
+});
+
+app.get("/getOutput", (c) => {
+  try {
+    const fileContent = fs.readFileSync("output", "utf-8"); // 读取文件内容
+    return c.text(fileContent); // 返回文件内容
+  } catch (err) {
+    console.error("Error reading output file:", err);
+    return c.text("Error reading output file", 500); // 返回错误状态
+  }
 });
 
 const port = 13280;
